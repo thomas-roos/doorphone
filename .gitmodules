@@ -1,0 +1,6 @@
+[submodule "master/linux-webrtc-reference-for-amazon-kinesis-video-streams"]
+	path = master/linux-webrtc-reference-for-amazon-kinesis-video-streams
+	url = https://github.com/awslabs/linux-webrtc-reference-for-amazon-kinesis-video-streams.git
+[submodule "viewer/amazon-kinesis-video-streams-webrtc-sdk-js"]
+	path = viewer/amazon-kinesis-video-streams-webrtc-sdk-js
+	url = https://github.com/awslabs/amazon-kinesis-video-streams-webrtc-sdk-js

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Doorbell Viewer</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        #video { width: 640px; height: 480px; background: #000; }
+        #ring-notification { display: none; padding: 20px; background: #4CAF50; color: white; margin: 10px 0; }
+        button { padding: 10px 20px; font-size: 16px; margin: 5px; }
+        #closeCall { background: #f44336; color: white; border: none; }
+        #openDoor { background: #2196F3; color: white; border: none; }
+    </style>
+</head>
+<body>
+    <h1>Video Doorbell Viewer</h1>
+    <div id="ring-notification">
+        🔔 Someone is at the door!
+        <button id="pickup-btn">Pick Up</button>
+    </div>
+    <video id="video" autoplay playsinline></video>
+    <div>
+        <button id="closeCall" onclick="closeCall()">Close Call</button>
+        <button id="openDoor" onclick="openDoor()">Open Door</button>
+    </div>
+    <div id="status">Connecting to AWS IoT...</div>
+
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.1000.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <script src="./amazon-kinesis-video-streams-webrtc-sdk-js/dist/kvs-webrtc.min.js"></script>
+    <script src="config.js"></script>
+    <script src="viewer.js"></script>
+</body>
+</html>

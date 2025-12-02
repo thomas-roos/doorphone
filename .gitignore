@@ -1,0 +1,17 @@
+# Secrets and credentials
+*.pem
+*.crt
+*.key
+.env
+config.js
+
+# Build artifacts
+build/
+node_modules/
+__pycache__/
+*.pyc
+
+# Temporary files
+*.log
+ring.json
+/tmp/

@@ -1,0 +1,8 @@
+{
+  "name": "doorbell-viewer",
+  "version": "1.0.0",
+  "dependencies": {
+    "aws-iot-device-sdk-v2": "^1.19.0",
+    "aws-sdk": "^2.1000.0"
+  }
+}

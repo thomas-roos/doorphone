@@ -1,0 +1,10 @@
+certs/
+*.pem
+*.crt
+*.key
+demo_config.h
+linux-webrtc-reference-for-amazon-kinesis-video-streams/build/
+__pycache__/
+*.pyc
+.env
+/tmp/

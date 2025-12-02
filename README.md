@@ -1,0 +1,211 @@
+# Video Doorbell System
+
+WebRTC-based video doorbell using AWS Kinesis Video Streams and AWS IoT Core.
+
+## System Architecture
+
+```
+┌────────────────────────────────────────────────────────────────────┐
+│                           AWS Cloud                                │
+│                                                                    │
+│  ┌──────────────────┐         ┌─────────────────────┐              │
+│  │   AWS IoT Core   │         │  Kinesis Video      │              │
+│  │                  │         │  Streams (KVS)      │              │
+│  │  MQTT Broker     │         │                     │              │
+│  │  Topic:          │         │  Signaling Channel  │              │
+│  │  doorbell/ring   │         │  doorbell-channel   │              │
+│  └────────┬─────────┘         └──────────┬──────────┘              │
+│           │                              │                         │
+└───────────┼──────────────────────────────┼─────────────────────────┘
+            │                              │
+            │ MQTT/WSS                     │ WebRTC/WSS
+            │ (Ring Events)                │ (Video Stream)
+            │                              │
+    ┌───────┴────────┐            ┌────────┴─────────┐
+    │                │            │                  │
+    │                │            │                  │
+┌───▼────────────┐   │        ┌───▼──────────────┐   │
+│  Master        │   │        │  Viewer(s)       │   │
+│  (Raspberry Pi)│   │        │  (Web Browser)   │   │
+│                │   │        │                  │   │
+│  ┌──────────┐  │   │        │  ┌────────────┐  │   │
+│  │ Button   │  │   │        │  │ Video      │  │   │
+│  │ Press    │──┼───┘        │  │ Display    │  │   │
+│  └──────────┘  │            │  └────────────┘  │   │
+│                │            │                  │   │
+│  ┌──────────┐  │            │  ┌────────────┐  │   │
+│  │ Camera   │  │            │  │ Close Call │  │   │
+│  │ (GStreamer)│┼────────────┼─▶│ Open Door  │  │   │
+│  └──────────┘  │            │  └────────────┘  │   │
+│                │            │                  │   │
+│  ┌──────────┐  │            │  Data Channel    │   │
+│  │ Door Lock│◀─┼────────────┼──(Commands)      │   │
+│  └──────────┘  │            │                  │   │
+└────────────────┘            └──────────────────┘   │
+                                                     │
+                              Multiple viewers supported
+
+Flow:
+1. Button press → Master publishes MQTT message
+2. Viewer(s) receive MQTT → Show notification
+3. Viewer picks up → Establishes WebRTC connection via KVS
+4. Master streams video → Viewer displays
+5. Viewer clicks "Open Door" → Sends command via data channel
+6. Master receives command → Unlocks door
+```
+
+## Components
+
+### Master (Raspberry Pi)
+- Python script with AWS IoT SDK v2
+- C WebRTC application (KVS reference implementation)
+- Publishes doorbell events via MQTT
+- Streams video via WebRTC
+- Receives door unlock commands
+
+### Viewer (Web Browser)
+- JavaScript web application
+- AWS KVS WebRTC JS SDK for video streaming
+- Paho MQTT JS library for MQTT over WebSockets
+- Subscribes to MQTT over WebSockets with SigV4 signing
+- Receives video via WebRTC
+- Sends commands via data channel
+
+## Setup
+
+### Quick Start
+
+1. **Run automated setup:**
+```bash
+chmod +x setup-aws-and-config.sh
+./setup-aws-and-config.sh
+```
+
+This interactive script will:
+- Create KVS signaling channel
+- Create IoT Thing and certificates
+- Generate `.env` and `config.js` files
+- Configure all AWS resources
+
+2. **Build KVS WebRTC:**
+```bash
+cd master/linux-webrtc-reference-for-amazon-kinesis-video-streams
+mkdir build && cd build
+cmake ..
+make
+cd ../../..
+```
+
+3. **Install Python dependencies (master):**
+```bash
+cd master
+pip3 install -r requirements.txt
+cd ..
+```
+
+4. **Run master:**
+```bash
+cd master
+source .env
+python3 doorbell-master.py
+```
+
+5. **Run viewer (in new terminal):**
+```bash
+cd viewer
+python3 -m http.server 8000
+```
+
+Open http://localhost:8000 in your browser.
+
+### Manual Setup
+
+If you prefer manual setup, see the detailed steps below.
+
+## Master Setup (Raspberry Pi)
+
+### 1. Install Dependencies
+```bash
+cd master
+pip3 install -r requirements.txt
+```
+
+### 2. Configure Environment
+```bash
+cp .env.example .env
+# Edit .env with your AWS IoT endpoint and settings
+```
+
+### 3. Setup AWS Certificates
+```bash
+mkdir -p certs
+# Copy your AWS IoT certificates to certs/:
+# - certificate.pem.crt
+# - private.pem.key
+# - AmazonRootCA1.pem
+```
+
+### 4. Build KVS WebRTC
+```bash
+cd linux-webrtc-reference-for-amazon-kinesis-video-streams
+mkdir build && cd build
+cmake ..
+make
+cd ../..
+```
+
+### 5. Run Master
+```bash
+source .env
+python3 doorbell-master.py
+```
+
+Press Enter to simulate doorbell button press.
+
+## Viewer Setup (Web Browser)
+
+### 1. Install Dependencies
+```bash
+cd viewer
+npm install
+```
+
+### 2. Configure Credentials
+```bash
+cp config.example.js config.js
+# Edit config.js with your AWS credentials and endpoints
+```
+
+### 3. Run Web Server
+```bash
+python3 -m http.server 8000
+```
+
+### 4. Open in Browser
+```
+http://localhost:8000
+```
+
+## Features
+
+### Master
+- Publishes doorbell events via MQTT
+- Streams video via WebRTC
+- Receives door unlock commands via data channel
+- Prints "🔓 DOOR UNLOCKED" when unlock command received
+
+### Viewer
+- Receives doorbell ring notifications via MQTT over WebSockets
+- Displays live video stream via WebRTC
+- **Close Call** button - End video connection
+- **Open Door** button - Send unlock command to master
+- Supports multiple simultaneous viewers
+
+## Security
+
+- AWS IoT Core with certificate-based authentication (Master)
+- SigV4 signed WebSocket connections (Viewer)
+- IAM roles with minimal permissions
+- No hardcoded credentials in repository
+- Never commit `.env` file, certificates, or `config.js` to git
+- All secrets are in `.gitignore`
