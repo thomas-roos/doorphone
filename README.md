@@ -56,12 +56,21 @@ Flow:
 
 ## Components
 
-### Master (Raspberry Pi)
+### Master Options
+
+#### Option 1: Linux Master (Raspberry Pi)
 - Python script with AWS IoT SDK v2
 - C WebRTC application (KVS reference implementation)
 - Publishes doorbell events via MQTT
 - Streams video via WebRTC
 - Receives door unlock commands
+
+#### Option 2: AmebaProII Master (Microcontroller)
+- FreeRTOS-based implementation
+- Integrated WebRTC on microcontroller
+- Lower power consumption
+- Real-time operating system
+- See [master-amebapro/README.md](master-amebapro/README.md)
 
 ### Viewer (Web Browser)
 - JavaScript web application

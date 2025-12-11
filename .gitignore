@@ -13,3 +13,7 @@ __pycache__/
 # Temporary files
 *.log
 /tmp/
+
+demo_config.h
+
+demo_config.h

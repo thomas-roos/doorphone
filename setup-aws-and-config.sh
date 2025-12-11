@@ -18,13 +18,6 @@ CHANNEL_NAME=${CHANNEL_NAME:-doorbell-channel}
 read -p "Enter IoT Thing name [doorbell-master]: " THING_NAME
 THING_NAME=${THING_NAME:-doorbell-master}
 
-# Get AWS credentials
-echo ""
-echo "Enter AWS credentials (for KVS access):"
-read -p "AWS Access Key ID: " ACCESS_KEY_ID
-read -sp "AWS Secret Access Key: " SECRET_ACCESS_KEY
-echo ""
-
 echo ""
 echo "Creating AWS resources..."
 echo ""
@@ -100,9 +93,44 @@ echo "8. Getting IoT endpoint..."
 IOT_ENDPOINT=$(aws iot describe-endpoint --endpoint-type iot:Data-ATS --region $REGION --query 'endpointAddress' --output text)
 echo "   IoT Endpoint: $IOT_ENDPOINT"
 
+# Get IoT credentials endpoint
+IOT_CRED_ENDPOINT=$(aws iot describe-endpoint --endpoint-type iot:CredentialProvider --region $REGION --query 'endpointAddress' --output text)
+echo "   IoT Credentials Endpoint: $IOT_CRED_ENDPOINT"
+
+# Create IAM role for KVS access
+echo "9. Creating IAM role for KVS..."
+ROLE_NAME="${THING_NAME}-kvs-role"
+aws iam create-role \
+    --role-name $ROLE_NAME \
+    --assume-role-policy-document '{
+        "Version": "2012-10-17",
+        "Statement": [{
+            "Effect": "Allow",
+            "Principal": {"Service": "credentials.iot.amazonaws.com"},
+            "Action": "sts:AssumeRole"
+        }]
+    }' >/dev/null 2>&1 || echo "   Role already exists"
+
+# Attach KVS policy to role
+aws iam attach-role-policy \
+    --role-name $ROLE_NAME \
+    --policy-arn arn:aws:iam::aws:policy/AmazonKinesisVideoStreamsFullAccess
+
+ROLE_ARN=$(aws iam get-role --role-name $ROLE_NAME --query 'Role.Arn' --output text)
+echo "   Role ARN: $ROLE_ARN"
+
+# Create IoT Role Alias
+echo "10. Creating IoT Role Alias..."
+ROLE_ALIAS="${THING_NAME}-role-alias"
+aws iot create-role-alias \
+    --role-alias $ROLE_ALIAS \
+    --role-arn $ROLE_ARN \
+    --region $REGION >/dev/null 2>&1 || echo "   Role alias already exists"
+echo "   Role Alias: $ROLE_ALIAS"
+
 # Create .env file
 echo ""
-echo "9. Creating .env file..."
+echo "11. Creating .env file..."
 cat > master/.env << EOF
 export IOT_ENDPOINT=$IOT_ENDPOINT
 export CERT_PATH=./certs/certificate.pem.crt
@@ -115,7 +143,7 @@ EOF
 echo "   Created master/.env"
 
 # Create demo_config.h for C WebRTC application
-echo "10. Creating demo_config.h..."
+echo "12. Creating demo_config.h..."
 cat > master/linux-webrtc-reference-for-amazon-kinesis-video-streams/examples/app_common/demo_config.h << EOF
 #ifndef DEMO_CONFIG_H
 #define DEMO_CONFIG_H
@@ -145,6 +173,79 @@ cat > master/linux-webrtc-reference-for-amazon-kinesis-video-streams/examples/ap
 #endif
 EOF
 echo "   Created demo_config.h"
+
+# Create AmebaProII demo_config.h
+echo "13. Creating AmebaProII demo_config.h..."
+mkdir -p master-amebapro/doorphone-master/examples/demo_config
+
+# Copy template as base
+cp master-amebapro/doorphone-master/examples/demo_config/demo_config_template.h \
+   master-amebapro/doorphone-master/examples/demo_config/demo_config.h
+
+# Update region and channel
+sed -i "s|#define AWS_REGION \"us-west-2\"|#define AWS_REGION \"$REGION\"|g" \
+    master-amebapro/doorphone-master/examples/demo_config/demo_config.h
+sed -i "s|#define AWS_KVS_CHANNEL_NAME \"\"|#define AWS_KVS_CHANNEL_NAME \"$CHANNEL_NAME\"|g" \
+    master-amebapro/doorphone-master/examples/demo_config/demo_config.h
+
+# Enable IoT credentials
+sed -i "s|// #define AWS_CREDENTIALS_ENDPOINT \"\"|#define AWS_CREDENTIALS_ENDPOINT \"$IOT_CRED_ENDPOINT\"|g" \
+    master-amebapro/doorphone-master/examples/demo_config/demo_config.h
+sed -i "s|// #define AWS_IOT_THING_NAME \"\"|#define AWS_IOT_THING_NAME \"$THING_NAME\"|g" \
+    master-amebapro/doorphone-master/examples/demo_config/demo_config.h
+sed -i "s|// #define AWS_IOT_THING_ROLE_ALIAS \"\"|#define AWS_IOT_THING_ROLE_ALIAS \"$ROLE_ALIAS\"|g" \
+    master-amebapro/doorphone-master/examples/demo_config/demo_config.h
+
+# Create certificates as multi-line C string literals
+cat >> master-amebapro/doorphone-master/examples/demo_config/demo_config.h << 'EOF'
+
+#define AWS_IOT_THING_CERT \
+EOF
+
+awk '{print "    \"" $0 "\\n\" \\"}' master/certs/certificate.pem.crt | sed '$ s/ \\$//' >> master-amebapro/doorphone-master/examples/demo_config/demo_config.h
+
+cat >> master-amebapro/doorphone-master/examples/demo_config/demo_config.h << 'EOF'
+
+#define AWS_IOT_THING_PRIVATE_KEY \
+EOF
+
+awk '{print "    \"" $0 "\\n\" \\"}' master/certs/private.pem.key | sed '$ s/ \\$//' >> master-amebapro/doorphone-master/examples/demo_config/demo_config.h
+
+# Add doorbell-specific configuration
+cat >> master-amebapro/doorphone-master/examples/demo_config/demo_config.h << EOF
+
+/* Doorbell Configuration */
+#define CLIENT_ID               "doorbell-master-ameba"
+#define DOORBELL_BUTTON_PIN     PB_31  /* AmebaProII Program Button */
+#define MQTT_TOPIC              "doorbell/$CHANNEL_NAME/ring"
+
+EOF
+
+echo "   Created master-amebapro/doorphone-master/examples/demo_config/demo_config.h"
+
+# Copy files to FreeRTOS project
+#TODO echo "12. Integrating with FreeRTOS project..."
+#TODO FREERTOS_PROJECT="master-amebapro/freertos-webrtc-amebapro/examples/master"
+#TODO 
+#TODO if [ -d "$FREERTOS_PROJECT" ]; then
+#TODO     cp master-amebapro/doorbell_config.h $FREERTOS_PROJECT/
+#TODO     cp master-amebapro/doorbell_master.c $FREERTOS_PROJECT/
+#TODO     
+#TODO     # Add task creation to master.c if not already present
+#TODO     if ! grep -q "doorbellMasterTask" $FREERTOS_PROJECT/master.c; then
+#TODO         # Add include at top
+#TODO         sed -i '1i #include "doorbell_master.c"' $FREERTOS_PROJECT/master.c
+#TODO         
+#TODO         # Add task creation before main loop
+#TODO         sed -i '/app_main\|int main/a \    xTaskCreate(doorbellMasterTask, "Doorbell", 2048, NULL, 5, NULL);' $FREERTOS_PROJECT/master.c
+#TODO         
+#TODO         echo "   Modified master.c"
+#TODO     fi
+#TODO     
+#TODO     echo "   Files copied to FreeRTOS project"
+#TODO else
+#TODO     echo "   FreeRTOS project not found, files ready in master-amebapro/"
+#TODO fi
 
 echo ""
 echo "=========================================="
