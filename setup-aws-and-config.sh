@@ -91,11 +91,20 @@ aws iot attach-policy \
 # Get IoT endpoint
 echo "8. Getting IoT endpoint..."
 IOT_ENDPOINT=$(aws iot describe-endpoint --endpoint-type iot:Data-ATS --region $REGION --query 'endpointAddress' --output text)
+if [ -z "$IOT_ENDPOINT" ] || [ "$IOT_ENDPOINT" = "None" ]; then
+    echo "   Error: Failed to get IoT endpoint. Checking AWS credentials and region..."
+    aws sts get-caller-identity --region $REGION
+    exit 1
+fi
 echo "   IoT Endpoint: $IOT_ENDPOINT"
 
 # Get IoT credentials endpoint
 IOT_CRED_ENDPOINT=$(aws iot describe-endpoint --endpoint-type iot:CredentialProvider --region $REGION --query 'endpointAddress' --output text)
 echo "   IoT Credentials Endpoint: $IOT_CRED_ENDPOINT"
+
+# Get IoT Core endpoint for MQTT
+IOT_CORE_ENDPOINT=$(aws iot describe-endpoint --endpoint-type iot:Data-ATS --region $REGION --query 'endpointAddress' --output text)
+echo "   IoT Core Endpoint: $IOT_CORE_ENDPOINT"
 
 # Create IAM role for KVS access
 echo "9. Creating IAM role for KVS..."
@@ -188,8 +197,10 @@ sed -i "s|#define AWS_REGION \"us-west-2\"|#define AWS_REGION \"$REGION\"|g" \
 sed -i "s|#define AWS_KVS_CHANNEL_NAME \"\"|#define AWS_KVS_CHANNEL_NAME \"$CHANNEL_NAME\"|g" \
     master-amebapro/doorphone-master/examples/demo_config/demo_config.h
 
-# Enable IoT credentials
+# Enable IoT endpoints
 sed -i "s|// #define AWS_CREDENTIALS_ENDPOINT \"\"|#define AWS_CREDENTIALS_ENDPOINT \"$IOT_CRED_ENDPOINT\"|g" \
+    master-amebapro/doorphone-master/examples/demo_config/demo_config.h
+sed -i "s|// #define AWS_IOT_CORE_ENDPOINT \"\"|#define AWS_IOT_CORE_ENDPOINT \"$IOT_CORE_ENDPOINT\"|g" \
     master-amebapro/doorphone-master/examples/demo_config/demo_config.h
 sed -i "s|// #define AWS_IOT_THING_NAME \"\"|#define AWS_IOT_THING_NAME \"$THING_NAME\"|g" \
     master-amebapro/doorphone-master/examples/demo_config/demo_config.h
