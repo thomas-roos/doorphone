@@ -1,30 +1,22 @@
-# Build Process Guidelines for AmebaProII Doorbell
+# Build Steering Rule
 
-## Prerequisites
-- ARM GCC toolchain installed from ARM developer site
-- Setup script already run from parent directory
-- Git with submodule support
-- CMake build system
+## Context Management
+When building projects, capture stdout to file and analyze afterwards to prevent context overflow.
 
-## Build Sequence (from this directory)
-1. **Submodule Init**: `git submodule update --init --recursive`
-2. **Navigate**: `cd project/realtek_amebapro2_webrtc_application/GCC-RELEASE`
-3. **Build Setup**: `mkdir build && cd build`
-4. **Configure**: `cmake .. -G"Unix Makefiles" -DCMAKE_TOOLCHAIN_FILE=../toolchain.cmake`
-5. **Build & Flash**: `cmake --build . --target flash -j$(nproc)`
+## Implementation
+Use `build_and_analyze.sh` script that:
+- Captures all build output to `build_output.txt`
+- Provides concise analysis with exit code, file sizes, warning/error counts
+- Shows only last few lines for success or last 20 lines for failures
+- Preserves full log for detailed inspection when needed
 
-## Build Troubleshooting
-- Verify ARM GCC toolchain in PATH
-- Check submodule initialization if build fails
-- Ensure toolchain.cmake exists and is correct
-- Verify hardware connection for flashing
+## Usage
+```bash
+./build_and_analyze.sh
+```
 
-## File Dependencies
-- `doorbell_config.h` (should exist from setup script)
-- `doorbell_master.c` (should exist from setup script)
-- Modified `master.c` (should be updated from setup script)
-
-## Build Targets
-- Default: `cmake --build . -j$(nproc)`
-- `flash`: `cmake --build . --target flash -j$(nproc)`
-- Clean builds recommended after config changes
+## Benefits
+- Prevents context overflow from verbose build output
+- Maintains build history in log files
+- Provides actionable summary information
+- Enables efficient troubleshooting when builds fail
