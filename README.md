@@ -75,10 +75,20 @@ Flow:
 ### Viewer (Web Browser)
 - JavaScript web application
 - AWS KVS WebRTC JS SDK for video streaming
-- Paho MQTT JS library for MQTT over WebSockets
+- AWS IoT Device SDK JS (via git submodule) for MQTT over WebSockets
 - Subscribes to MQTT over WebSockets with SigV4 signing
 - Receives video via WebRTC
 - Sends commands via data channel
+
+**Dependencies:**
+- `aws-iot-device-sdk-js` (git submodule) - MQTT functionality
+- `aws-sdk-3.758.0-kvswebrtc.js` - AWS SDK for WebRTC
+- `kvs-webrtc.min.js` - KVS WebRTC SDK
+
+**Browser Bundle:**
+The AWS IoT Device SDK is included as a git submodule and built into a browser bundle (`aws-iot-browser-bundle.js`) using browserify for MQTT functionality.
+
+## Setup
 
 ## Setup
 
@@ -112,14 +122,28 @@ pip3 install -r requirements.txt
 cd ..
 ```
 
-4. **Run master:**
+4. **Build browser dependencies (viewer):**
+```bash
+cd viewer
+# Initialize git submodules (AWS IoT Device SDK)
+git submodule update --init --recursive
+
+# Build AWS IoT browser bundle (if not already present)
+cd aws-iot-device-sdk-js
+npm install
+cd ..
+browserify aws-iot-wrapper.js > aws-iot-browser-bundle.js
+cd ..
+```
+
+5. **Run master:**
 ```bash
 cd master
 source .env
 python3 doorbell-master.py
 ```
 
-5. **Run viewer (in new terminal):**
+6. **Run viewer (in new terminal):**
 ```bash
 cd viewer
 python3 -m http.server 8000
