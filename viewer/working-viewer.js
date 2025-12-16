@@ -259,6 +259,23 @@ async function startViewer() {
         // Create peer connection
         viewer.peerConnection = new RTCPeerConnection({ iceServers });
         
+        // Create data channel for commands
+        viewer.dataChannel = viewer.peerConnection.createDataChannel('commands', {
+            ordered: true
+        });
+        
+        viewer.dataChannel.onopen = () => {
+            log('Data channel opened');
+        };
+        
+        viewer.dataChannel.onclose = () => {
+            log('Data channel closed');
+        };
+        
+        viewer.dataChannel.onerror = (error) => {
+            log('Data channel error: ' + error);
+        };
+        
         // Set up event handlers
         viewer.signalingClient.on('open', async () => {
             log('Signaling client connected');
@@ -318,6 +335,10 @@ function closeCall() {
         viewer.signalingClient.close();
         viewer.signalingClient = null;
     }
+    if (viewer.dataChannel) {
+        viewer.dataChannel.close();
+        viewer.dataChannel = null;
+    }
     if (viewer.peerConnection) {
         viewer.peerConnection.close();
         viewer.peerConnection = null;
@@ -328,7 +349,13 @@ function closeCall() {
 }
 
 function openDoor() {
-    log('Door unlock command sent');
+    if (viewer.dataChannel && viewer.dataChannel.readyState === 'open') {
+        const command = JSON.stringify({ action: 'open_door' });
+        viewer.dataChannel.send(command);
+        log('Door unlock command sent via data channel: ' + command);
+    } else {
+        log('Data channel not available - cannot send door unlock command');
+    }
 }
 
 // Load saved config on page load
