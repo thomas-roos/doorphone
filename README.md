@@ -2,6 +2,10 @@
 
 WebRTC-based video doorbell using AWS Kinesis Video Streams and AWS IoT Core.
 
+![System Diagram](diagram.png)
+
+*Special thanks to Rui Cardoso for creating this excellent system diagram!*
+
 ## System Architecture
 
 ```
