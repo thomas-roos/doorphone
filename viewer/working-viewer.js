@@ -46,6 +46,13 @@ function loadConfig() {
 
 function connectMQTT() {
     try {
+        // Check if AWS IoT SDK is loaded
+        if (typeof awsIot === 'undefined') {
+            log('AWS IoT SDK not loaded yet, retrying in 1 second...');
+            setTimeout(connectMQTT, 1000);
+            return;
+        }
+        
         log('AWS IoT SDK loaded, creating device connection...');
         
         mqttClient = awsIot.device({
