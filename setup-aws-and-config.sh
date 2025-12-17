@@ -151,8 +151,35 @@ export AWS_REGION=$REGION
 EOF
 echo "   Created master/.env"
 
+# Create viewer settings file for manual reference
+echo "12. Creating viewer settings file..."
+cat > viewer/settings.txt << EOF
+VIEWER CONFIGURATION SETTINGS
+=============================
+
+Copy these values into the viewer web interface:
+
+AWS Region: $REGION
+IoT Endpoint: $IOT_ENDPOINT
+KVS Channel ARN: $CHANNEL_ARN
+
+AWS Credentials (you need to provide your own):
+Access Key ID: [Enter your AWS Access Key ID]
+Secret Access Key: [Enter your AWS Secret Access Key]
+Session Token: [Optional - only if using temporary credentials]
+
+MQTT Topic (auto-generated): doorbell/$CHANNEL_NAME/ring
+EOF
+echo "   Created viewer/settings.txt"
+
+# Add settings.txt to .gitignore if not already there
+if ! grep -q "viewer/settings.txt" .gitignore 2>/dev/null; then
+    echo "viewer/settings.txt" >> .gitignore
+    echo "   Added viewer/settings.txt to .gitignore"
+fi
+
 # Create demo_config.h for C WebRTC application
-echo "12. Creating demo_config.h..."
+echo "13. Creating demo_config.h..."
 cat > master/linux-webrtc-reference-for-amazon-kinesis-video-streams/examples/app_common/demo_config.h << EOF
 #ifndef DEMO_CONFIG_H
 #define DEMO_CONFIG_H
@@ -184,7 +211,7 @@ EOF
 echo "   Created demo_config.h"
 
 # Create AmebaProII demo_config.h
-echo "13. Creating AmebaProII demo_config.h..."
+echo "14. Creating AmebaProII demo_config.h..."
 mkdir -p master-amebapro/doorphone-master/examples/demo_config
 
 # Copy template as base
@@ -267,13 +294,20 @@ echo "=========================================="
 echo "  Setup Complete!"
 echo "=========================================="
 echo ""
-echo "Viewer Configuration (enter in browser):"
-echo "  AWS Region: $REGION"
-echo "  IoT Endpoint: $IOT_ENDPOINT"
-echo "  MQTT Topic: doorbell/$CHANNEL_NAME/ring (auto-generated from channel)"
-echo "  KVS Channel ARN: $CHANNEL_ARN"
-echo "  AWS Access Key ID: ACCESS_KEY_ID"
-echo "  AWS Secret Access Key: SECRET_ACCESS_KEY"
+echo "VIEWER CONFIGURATION:"
+echo "=========================================="
+echo "Region: $REGION"
+echo "IoT Endpoint: $IOT_ENDPOINT"
+echo "KVS Channel ARN: $CHANNEL_ARN"
+echo "MQTT Topic: doorbell/$CHANNEL_NAME/ring"
+echo ""
+echo "AWS Credentials (you need to provide these):"
+echo "Access Key ID: [Enter your AWS Access Key ID]"
+echo "Secret Access Key: [Enter your AWS Secret Access Key]"
+echo "Session Token: [Optional - only if using temporary credentials]"
+echo ""
+echo "Configuration saved to: viewer/settings.txt"
+echo "=========================================="
 echo ""
 echo "Next steps:"
 echo "1. Build KVS WebRTC (REQUIRED - config was just generated):"
@@ -288,7 +322,7 @@ echo "   source .env"
 echo "   python3 doorbell-master.py"
 echo ""
 echo "3. Run viewer:"
-echo "   cd viewer"
-echo "   python3 -m http.server 8000"
-echo "   Open http://localhost:8000"
+echo "   Open GitHub Pages URL or run locally:"
+echo "   cd viewer && python3 -m http.server 8000"
+echo "   Copy settings from viewer/settings.txt into the web interface"
 echo ""
