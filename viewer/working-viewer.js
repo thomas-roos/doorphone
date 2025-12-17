@@ -49,6 +49,23 @@ function connectMQTT() {
         // Check if AWS IoT SDK is loaded
         if (typeof awsIot === 'undefined') {
             log('AWS IoT SDK not loaded yet, retrying in 1 second...');
+            log('Checking if script files are accessible...');
+            
+            // Check if we can access the bundle file
+            fetch('./aws-iot-browser-bundle.js')
+                .then(response => {
+                    if (!response.ok) {
+                        log('ERROR: aws-iot-browser-bundle.js not found (404)');
+                        log('MQTT functionality will not work on this deployment');
+                        return;
+                    }
+                    log('Bundle file exists but awsIot object not created');
+                })
+                .catch(error => {
+                    log('ERROR: Cannot access aws-iot-browser-bundle.js: ' + error.message);
+                    log('MQTT functionality will not work on this deployment');
+                });
+            
             setTimeout(connectMQTT, 1000);
             return;
         }
