@@ -26,6 +26,18 @@ jobs:
         with:
           submodules: recursive
       
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Build AWS IoT bundle
+        run: |
+          cd viewer/aws-iot-device-sdk-js
+          npm install
+          cd ..
+          npx browserify aws-iot-wrapper.js > aws-iot-browser-bundle.js
+      
       - name: Setup Pages
         uses: actions/configure-pages@v4
       
