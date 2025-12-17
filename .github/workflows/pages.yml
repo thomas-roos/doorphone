@@ -33,12 +33,23 @@ jobs:
           git submodule init
           git submodule update --recursive --remote
       
-      - name: Verify submodule files exist
+      - name: Copy submodule files to viewer directory
+        run: |
+          cd viewer
+          cp amazon-kinesis-video-streams-webrtc-sdk-js/dist/kvs-webrtc.min.js ./
+          cp amazon-kinesis-video-streams-webrtc-sdk-js/examples/aws-sdk-3.758.0-kvswebrtc.js ./
+      
+      - name: Update HTML to use copied files
+        run: |
+          cd viewer
+          sed -i 's|./amazon-kinesis-video-streams-webrtc-sdk-js/examples/aws-sdk-3.758.0-kvswebrtc.js|./aws-sdk-3.758.0-kvswebrtc.js|g' index.html
+          sed -i 's|./amazon-kinesis-video-streams-webrtc-sdk-js/dist/kvs-webrtc.min.js|./kvs-webrtc.min.js|g' index.html
+      
+      - name: Verify files are ready for deployment
         run: |
           ls -la viewer/
-          ls -la viewer/amazon-kinesis-video-streams-webrtc-sdk-js/ || echo "Submodule directory not found"
-          ls -la viewer/amazon-kinesis-video-streams-webrtc-sdk-js/dist/ || echo "Dist directory not found"
-          ls -la viewer/amazon-kinesis-video-streams-webrtc-sdk-js/examples/ || echo "Examples directory not found"
+          ls -la viewer/kvs-webrtc.min.js || echo "KVS file missing"
+          ls -la viewer/aws-sdk-3.758.0-kvswebrtc.js || echo "AWS SDK file missing"
       
       - name: Setup Pages
         uses: actions/configure-pages@v4
