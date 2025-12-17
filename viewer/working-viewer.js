@@ -142,7 +142,6 @@ function connectMQTT() {
 function showRingNotification() {
     const notification = document.getElementById('ring-notification');
     notification.style.display = 'block';
-    document.getElementById('status').textContent = 'Someone is at the door!';
     
     document.getElementById('pickup-btn').onclick = () => {
         notification.style.display = 'none';
