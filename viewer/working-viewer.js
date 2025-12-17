@@ -44,27 +44,39 @@ function loadConfig() {
     }
 }
 
+let mqttRetryCount = 0;
+const MAX_MQTT_RETRIES = 10;
+
 function connectMQTT() {
     try {
         // Check if AWS IoT SDK is loaded
         if (typeof awsIot === 'undefined') {
-            log('AWS IoT SDK not loaded yet, retrying in 1 second...');
-            log('Checking if script files are accessible...');
+            mqttRetryCount++;
             
-            // Check if we can access the bundle file
-            fetch('./aws-iot-browser-bundle.js')
-                .then(response => {
-                    if (!response.ok) {
-                        log('ERROR: aws-iot-browser-bundle.js not found (404)');
-                        log('MQTT functionality will not work on this deployment');
-                        return;
-                    }
-                    log('Bundle file exists but awsIot object not created');
-                })
-                .catch(error => {
-                    log('ERROR: Cannot access aws-iot-browser-bundle.js: ' + error.message);
-                    log('MQTT functionality will not work on this deployment');
-                });
+            if (mqttRetryCount >= MAX_MQTT_RETRIES) {
+                log('AWS IoT SDK failed to load after ' + MAX_MQTT_RETRIES + ' attempts');
+                log('Running in MQTT-disabled mode - WebRTC will still work');
+                log('You can still test WebRTC by clicking "Test WebRTC (No MQTT)"');
+                document.getElementById('status').textContent = 'MQTT disabled - WebRTC only mode';
+                return;
+            }
+            
+            log('AWS IoT SDK not loaded yet, retrying in 1 second... (' + mqttRetryCount + '/' + MAX_MQTT_RETRIES + ')');
+            
+            // Check if we can access the bundle file (only on first few retries)
+            if (mqttRetryCount <= 3) {
+                fetch('./aws-iot-browser-bundle.js')
+                    .then(response => {
+                        if (!response.ok) {
+                            log('ERROR: aws-iot-browser-bundle.js not found (404)');
+                        } else {
+                            log('Bundle file exists but awsIot object not created');
+                        }
+                    })
+                    .catch(error => {
+                        log('ERROR: Cannot access aws-iot-browser-bundle.js: ' + error.message);
+                    });
+            }
             
             setTimeout(connectMQTT, 1000);
             return;
