@@ -26,11 +26,19 @@ jobs:
         with:
           submodules: recursive
           fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Initialize and update submodules
+        run: |
+          git submodule init
+          git submodule update --recursive --remote
       
       - name: Verify submodule files exist
         run: |
-          ls -la viewer/amazon-kinesis-video-streams-webrtc-sdk-js/dist/
-          ls -la viewer/amazon-kinesis-video-streams-webrtc-sdk-js/examples/
+          ls -la viewer/
+          ls -la viewer/amazon-kinesis-video-streams-webrtc-sdk-js/ || echo "Submodule directory not found"
+          ls -la viewer/amazon-kinesis-video-streams-webrtc-sdk-js/dist/ || echo "Dist directory not found"
+          ls -la viewer/amazon-kinesis-video-streams-webrtc-sdk-js/examples/ || echo "Examples directory not found"
       
       - name: Setup Pages
         uses: actions/configure-pages@v4
